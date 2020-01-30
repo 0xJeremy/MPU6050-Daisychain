@@ -1,7 +1,7 @@
 from mpu6050 import MPU6050
 
 class MPU6050_Daisy():
-	def __init__(self, i2c_bus, addresses, names=None):
+	def __init__(self, i2c_bus, addresses, names=None, file=None):
 		self._devices = []
 		self._addresses = addresses
 		for addr in addresses:
@@ -12,14 +12,17 @@ class MPU6050_Daisy():
 		if names is not None:
 			self.name_devices(names)
 		else: self._names = None
+		if file is not None:
+			self.set_file(file)
+		else: self._file = None
 
 	def reset_all(self):
 		for i in self._devices:
 			i.reset()
 
-	##################################
-	### WRAPPERS FOR MPU INTERFACE ###
-	##################################
+	######################################
+	### WRAPPERS FOR MPU6050 INTERFACE ###
+	######################################
 
 	@property
 	def temperature(self):
@@ -84,12 +87,31 @@ class MPU6050_Daisy():
 	def get_with_addr(self, pos):
 		return self._devices[pos], self._addresses[pos]
 
+	def get_all(self):
+		return self._devices
+
+	def get_all_with_name(self):
+		if self._names is None:
+			raise RuntimeError("No device names specified.")
+		return [(self._devices[i], self._names[i]) for i in range(len(self._devices))]
+
 	def name_devices(self, names):
 		if len(names) is not len(self._devices):
 			raise RuntimeError("Length of names is not the same as number of devices")
 		self._names = names
 
-	def get_all_data(self):
-		data = []
-		if self._names is not None:
-			return [(self._devices[i], self._names[i]) for i in range(len(self._devices))]
+	def set_file(self, file):
+		if self._file is not None:
+			raise RuntimeError("File already opened! Cannot open another.")
+		self._file = open(file, "a")
+
+	def write(self):
+		if self._file is None:
+			raise RuntimeError("No file opened.")
+		for i in self._devices:
+			self._file.write("{}, {}".format(i.acceleration, i.gyro))
+
+	def close_file(self):
+		if self._file is None:
+			raise RuntimeError("No file opened.")
+		self._file.close()
